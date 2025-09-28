@@ -1,0 +1,48 @@
+import requests
+from bs4 import BeautifulSoup
+from transformers import pipeline
+
+# Inizializza il modello di sentiment analysis
+sentiment_analyzer = pipeline("sentiment-analysis")
+
+def estrai_testo_da_url(url):
+    """
+    Estrae il testo principale da una pagina web.
+    """
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, 'html.parser')
+
+    # Estrae solo i paragrafi principali
+    paragrafi = soup.find_all('p')
+    testo = ' '.join([p.get_text() for p in paragrafi])
+    return testo.strip()
+
+def analizza_sentiment_tts(testo):
+    """
+    Analizza il sentiment e restituisce parametri utili per il TTS.
+    """
+    risultato = sentiment_analyzer(testo[:512])[0]  # Limita a 512 caratteri per performance
+    label = risultato['label']
+    score = risultato['score']
+
+    # Parametri TTS suggeriti
+    if label == "POSITIVE":
+        tts = {"tone": "cheerful", "rate": "fast", "pitch": "high"}
+    elif label == "NEGATIVE":
+        tts = {"tone": "serious", "rate": "slow", "pitch": "low"}
+    else:
+        tts = {"tone": "neutral", "rate": "medium", "pitch": "medium"}
+
+    return {
+        "sentiment": label,
+        "confidence": round(score, 2),
+        "tts_parameters": tts
+    }
+
+# ESEMPIO DI USO
+url = "https://www.webhero.it/sentiment-analysis/"  # Puoi sostituirlo con qualsiasi URL
+testo = estrai_testo_da_url(url)
+risultato = analizza_sentiment_tts(testo)
+
+print("Risultato sentiment analysis:")
+print(risultato)
